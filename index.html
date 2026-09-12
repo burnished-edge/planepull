@@ -33,15 +33,27 @@
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .btn-secondary:hover { background: var(--border); }
-    .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+    .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-    th { background: #162032; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; cursor: pointer; user-select: none; white-space: nowrap; }
+    th { background: #162032; padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; cursor: pointer; user-select: none; white-space: nowrap; }
     th:hover { color: var(--text); }
-    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:hover { background: #24324a; }
     
-    .col-team { max-width: 180px; width: 180px; word-break: break-word; white-space: normal; line-height: 1.35; font-size: 0.85rem; }
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    /* Fluid Team Column Sizing */
+    .col-team { 
+      width: auto;
+      min-width: 120px;
+      max-width: 220px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      hyphens: auto;
+      white-space: normal;
+      line-height: 1.35;
+      font-size: 0.85rem;
+    }
+
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
     .badge-active { background: rgba(74, 222, 128, 0.1); color: var(--green); }
     .badge-zero { background: rgba(248, 113, 113, 0.1); color: var(--red); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; color: var(--muted); }
@@ -52,26 +64,37 @@
     .status-text { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
 
     @media (max-width: 768px) {
-      body { padding: 14px; }
+      body { padding: 12px; }
       header { flex-direction: column; align-items: stretch; gap: 12px; }
       header div:last-child { display: flex; flex-wrap: wrap; width: 100%; gap: 8px; }
       header .btn { flex: 1; text-align: center; justify-content: center; }
 
+      /* Prevent iOS Safari auto-zoom on inputs (<16px) */
       input[type="text"], input[type="date"], select {
         font-size: 16px !important;
         width: 100%;
       }
 
-      .controls { flex-direction: column; align-items: stretch; gap: 10px; }
+      .controls { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
       .tab-group { width: 100%; }
       .tab { flex: 1; text-align: center; padding: 10px; }
       .date-filter-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .date-filter-group span { display: none; }
 
-      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
       .kpi-card { padding: 12px; }
-      .kpi-val { font-size: 1.3rem; }
+      .kpi-val { font-size: 1.25rem; }
 
+      td, th { padding: 10px 8px; }
+
+      /* Dynamic fluid mobile width for team names */
+      .col-team {
+        min-width: 100px;
+        max-width: 32vw;
+        font-size: 0.8rem;
+      }
+
+      /* Hide verbose technical IDs on mobile screens */
       .col-uuid { display: none; }
     }
   </style>
@@ -310,7 +333,7 @@
             <td class="col-team">${teamName}</td>
             <td><span class="badge ${raised > 0 ? 'badge-active' : 'badge-zero'}">$${raised.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
             <td>$${goal.toLocaleString()}</td>
-            <td style="font-size: 0.85rem;">${formatDate(d.createdAt)}</td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(d.createdAt)}</td>
             <td class="mono col-uuid">${d.uuid ? d.uuid.substring(0, 8) + '...' : ''} (${d.path || ''})</td>
           `;
           tbody.appendChild(tr);
@@ -372,7 +395,7 @@
           tr.innerHTML = `
             <td><strong>${t.name}</strong></td>
             <td><span class="badge badge-active">$${(t.total / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
-            <td style="font-size: 0.85rem;">${formatDate(t.createdAt)}</td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(t.createdAt)}</td>
             <td class="mono">/t/${t.path}</td>
             <td class="mono col-uuid">${t.uuid}</td>
           `;
@@ -392,7 +415,6 @@
       statusEl.style.color = "var(--green)";
     }
 
-    // Auto-paginating live API fetcher
     async function syncLiveAPI() {
       const btn = document.getElementById('refreshBtn');
       const statusEl = document.getElementById('syncStatus');
@@ -427,7 +449,6 @@
           totalCount = json.pagination?.total || aggregatedData.length;
           offset += items.length;
 
-          // Guard against runaway loops if total is missing
           if (!json.pagination || items.length < limit) break;
         }
 
@@ -492,7 +513,6 @@
       renderHeaders();
       applyFilters();
 
-      // 1. Check if session already holds data
       const cached = sessionStorage.getItem('cached_profiles');
       if (cached) {
         try {
@@ -501,7 +521,6 @@
         } catch(e) {}
       }
 
-      // 2. Otherwise try reading the bundled profiles.json
       try {
         const res = await fetch('./profiles.json');
         if (res.ok) {
@@ -509,11 +528,8 @@
           processIncomingData(json, "Loaded from profiles.json");
           return;
         }
-      } catch (err) {
-        // file:// or 404
-      }
+      } catch (err) {}
 
-      // 3. Fallback notice
       const statusEl = document.getElementById('syncStatus');
       statusEl.innerText = "No local cache found. Click '↻ Sync API' to pull live.";
       statusEl.style.color = "var(--muted)";
