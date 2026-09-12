@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2026 Plane Pull — Campaign Command Center</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --green: #4ade80;
+      --red: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #fff; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .kpi-card { background: var(--card); border: 1px solid var(--border); padding: 18px; border-radius: 8px; }
+    .kpi-label { font-size: 0.8rem; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+    .kpi-val { font-size: 1.6rem; font-weight: 700; color: var(--green); }
+    .controls { background: var(--card); border: 1px solid var(--border); padding: 16px; border-radius: 8px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
+    input[type="text"], input[type="date"], select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; outline: none; }
+    input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--accent); }
+    .date-filter-group { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); }
+    .btn { background: var(--accent); color: #0f172a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+    .btn:hover { background: var(--accent-hover); color: #fff; }
+    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover { background: var(--border); }
+    .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+    th { background: #162032; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; cursor: pointer; user-select: none; white-space: nowrap; }
+    th:hover { color: var(--text); }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:hover { background: #24324a; }
+    
+    .col-team { max-width: 180px; width: 180px; word-break: break-word; white-space: normal; line-height: 1.35; font-size: 0.85rem; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-active { background: rgba(74, 222, 128, 0.1); color: var(--green); }
+    .badge-zero { background: rgba(248, 113, 113, 0.1); color: var(--red); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; color: var(--muted); }
+    .tab-group { display: flex; gap: 8px; }
+    .tab { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
+    .tab.active { background: var(--accent); color: #0f172a; font-weight: 600; border-color: var(--accent); }
+    .file-input { display: none; }
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 768px) {
+      body { padding: 14px; }
+      header { flex-direction: column; align-items: stretch; gap: 12px; }
+      header div:last-child { display: flex; width: 100%; }
+      header .btn { flex: 1; text-align: center; }
+
+      /* Prevent iOS auto-zoom on inputs (<16px) */
+      input[type="text"], input[type="date"], select {
+        font-size: 16px !important;
+        width: 100%;
+      }
+
+      .controls { flex-direction: column; align-items: stretch; gap: 10px; }
+      .tab-group { width: 100%; }
+      .tab { flex: 1; text-align: center; padding: 10px; }
+      .date-filter-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .date-filter-group span { display: none; }
+
+      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .kpi-card { padding: 12px; }
+      .kpi-val { font-size: 1.3rem; }
+
+      /* Hide verbose technical IDs on mobile to avoid horizontal table blowout */
+      .col-uuid { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>2026 Plane Pull — Campaign Ops Console</h1>
+      <p style="color: var(--muted); font-size: 0.85rem; margin-top: 4px;">Real-time profile performance, team grouping & registration tracking</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileUpload').click()">+ Load JSON File</button>
+      <input type="file" id="fileUpload" class="file-input" accept=".json" onchange="handleFileUpload(event)" />
+      <button class="btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+  </header>
+
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Volume (Indiv. Fundraisers)</div>
+      <div class="kpi-val" id="kpiTotalRaised">$0.00</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Active Individuals</div>
+      <div class="kpi-val" id="kpiFundraisers" style="color: #fff;">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Unique Teams Represented</div>
+      <div class="kpi-val" id="kpiTeams" style="color: var(--accent);">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Inactives ($0 Raised)</div>
+      <div class="kpi-val" id="kpiZeroes" style="color: var(--red);">0</div>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="tab-group">
+      <button class="tab active" id="tabIndiv" onclick="setView('INDIVIDUAL')">Individuals</button>
+      <button class="tab" id="tabTeam" onclick="setView('TEAMS')">Unique Teams</button>
+    </div>
+
+    <input type="text" id="searchInput" placeholder="Search name, slug, or team..." oninput="applyFilters()" style="flex: 1; min-width: 180px;" />
+
+    <select id="teamFilter" onchange="applyFilters()">
+      <option value="">All Teams</option>
+    </select>
+
+    <select id="statusFilter" onchange="applyFilters()">
+      <option value="ALL">All Amounts</option>
+      <option value="HAS_RAISED">Has Raised (> $0)</option>
+      <option value="ZERO">$0 Raised (Follow-up needed)</option>
+    </select>
+
+    <div class="date-filter-group">
+      <span>From:</span>
+      <input type="date" id="dateStart" onchange="applyFilters()" />
+      <span>To:</span>
+      <input type="date" id="dateEnd" onchange="applyFilters()" />
+    </div>
+  </section>
+
+  <section class="table-container">
+    <table id="dataTable">
+      <thead>
+        <tr id="tableHeaders"></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </section>
+
+  <script>
+    let rawData = [];
+    let currentView = 'INDIVIDUAL';
+    let sortCol = 'createdAt';
+    let sortAsc = false;
+
+    function setView(view) {
+      currentView = view;
+      document.getElementById('tabIndiv').classList.toggle('active', view === 'INDIVIDUAL');
+      document.getElementById('tabTeam').classList.toggle('active', view === 'TEAMS');
+      document.getElementById('teamFilter').style.display = (view === 'INDIVIDUAL') ? 'inline-block' : 'none';
+      sortCol = (view === 'INDIVIDUAL') ? 'createdAt' : 'total';
+      sortAsc = false;
+      renderHeaders();
+      applyFilters();
+    }
+
+    function renderHeaders() {
+      const tr = document.getElementById('tableHeaders');
+      if (currentView === 'INDIVIDUAL') {
+        tr.innerHTML = `
+          <th onclick="setSort('name')">Name ⬍</th>
+          <th class="col-team" onclick="setSort('team')">Team ⬍</th>
+          <th onclick="setSort('total')">Raised ⬍</th>
+          <th onclick="setSort('goal')">Goal ⬍</th>
+          <th onclick="setSort('createdAt')">Date / Time ⬍</th>
+          <th class="col-uuid">UUID / Path</th>
+        `;
+      } else {
+        tr.innerHTML = `
+          <th onclick="setSort('name')">Team Name ⬍</th>
+          <th onclick="setSort('total')">Team Raised ⬍</th>
+          <th onclick="setSort('createdAt')">Created Date ⬍</th>
+          <th>Team Slug</th>
+          <th class="col-uuid">Team UUID</th>
+        `;
+      }
+    }
+
+    function setSort(col) {
+      if (sortCol === col) sortAsc = !sortAsc;
+      else { 
+        sortCol = col; 
+        sortAsc = (col === 'name'); 
+      }
+      applyFilters();
+    }
+
+    function formatDate(isoStr) {
+      if (!isoStr) return '<span style="color:var(--muted)">—</span>';
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString(undefined, { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      }) + ' ' + d.toLocaleTimeString(undefined, { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    }
+
+    function populateTeamDropdown() {
+      const sel = document.getElementById('teamFilter');
+      const teams = new Set();
+      rawData.forEach(d => {
+        if (d.type === 'INDIVIDUAL' && d.teamProfile && d.teamProfile.name) {
+          teams.add(d.teamProfile.name);
+        }
+      });
+      sel.innerHTML = '<option value="">All Teams</option>';
+      Array.from(teams).sort().forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t; opt.innerText = t;
+        sel.appendChild(opt);
+      });
+    }
+
+    function updateKPIs() {
+      let totalCents = 0;
+      let zeroes = 0;
+      let individualCount = 0;
+      const teams = new Set();
+
+      rawData.forEach(d => {
+        if (d.type === 'INDIVIDUAL') {
+          individualCount++;
+          totalCents += (d.total || 0);
+          if ((d.total || 0) === 0) zeroes++;
+          if (d.teamProfile && d.teamProfile.name) teams.add(d.teamProfile.name);
+        } else if (d.type === 'GROUP') {
+          teams.add(d.name);
+        }
+      });
+
+      document.getElementById('kpiTotalRaised').innerText = `$${(totalCents / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+      document.getElementById('kpiFundraisers').innerText = individualCount;
+      document.getElementById('kpiTeams').innerText = teams.size;
+      document.getElementById('kpiZeroes').innerText = zeroes;
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const team = document.getElementById('teamFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      const dStart = document.getElementById('dateStart').value ? new Date(document.getElementById('dateStart').value + 'T00:00:00') : null;
+      const dEnd = document.getElementById('dateEnd').value ? new Date(document.getElementById('dateEnd').value + 'T23:59:59') : null;
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      if (rawData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 32px;">No profiles loaded. Ensure profiles.json is in the directory or load a file via the button above.</td></tr>`;
+        return;
+      }
+
+      if (currentView === 'INDIVIDUAL') {
+        let list = rawData.filter(d => {
+          if (d.type && d.type !== 'INDIVIDUAL') return false;
+
+          const tName = d.teamProfile ? d.teamProfile.name : 'No Team';
+          const matchSearch = (d.name || '').toLowerCase().includes(search) || 
+                              tName.toLowerCase().includes(search) || 
+                              (d.path || '').includes(search);
+          const matchTeam = !team || (d.teamProfile && d.teamProfile.name === team);
+          const matchStatus = status === 'ALL' || 
+                              (status === 'HAS_RAISED' && (d.total || 0) > 0) || 
+                              (status === 'ZERO' && (d.total || 0) === 0);
+
+          let matchDate = true;
+          if (d.createdAt && (dStart || dEnd)) {
+            const itemDate = new Date(d.createdAt);
+            if (dStart && itemDate < dStart) matchDate = false;
+            if (dEnd && itemDate > dEnd) matchDate = false;
+          }
+
+          return matchSearch && matchTeam && matchStatus && matchDate;
+        });
+
+        list.sort((a, b) => {
+          let vA = sortCol === 'team' ? (a.teamProfile?.name || '') : a[sortCol];
+          let vB = sortCol === 'team' ? (b.teamProfile?.name || '') : b[sortCol];
+          if (sortCol === 'createdAt') {
+            vA = new Date(vA || 0).getTime();
+            vB = new Date(vB || 0).getTime();
+            return sortAsc ? vA - vB : vB - vA;
+          }
+          if (typeof vA === 'string') return sortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+          return sortAsc ? (vA || 0) - (vB || 0) : (vB || 0) - (vA || 0);
+        });
+
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color: var(--muted);">No matching individual fundraisers found.</td></tr>`;
+          return;
+        }
+
+        list.forEach(d => {
+          const raised = (d.total || 0) / 100;
+          const goal = (d.goal || 0) / 100;
+          const teamName = d.teamProfile ? d.teamProfile.name : '<span style="color:var(--muted)">None</span>';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${d.name || 'Unnamed'}</strong></td>
+            <td class="col-team">${teamName}</td>
+            <td><span class="badge ${raised > 0 ? 'badge-active' : 'badge-zero'}">$${raised.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
+            <td>$${goal.toLocaleString()}</td>
+            <td style="font-size: 0.85rem;">${formatDate(d.createdAt)}</td>
+            <td class="mono col-uuid">${d.uuid ? d.uuid.substring(0, 8) + '...' : ''} (${d.path || ''})</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        const teamMap = new Map();
+
+        rawData.forEach(d => {
+          if (d.type === 'GROUP' && !d.isCampaignProfile) {
+            teamMap.set(d.uuid, {
+              uuid: d.uuid,
+              name: d.name,
+              path: d.path,
+              total: d.total || 0,
+              createdAt: d.createdAt
+            });
+          }
+          if (d.teamProfile && !teamMap.has(d.teamProfile.uuid)) {
+            teamMap.set(d.teamProfile.uuid, {
+              uuid: d.teamProfile.uuid,
+              name: d.teamProfile.name,
+              path: d.teamProfile.path,
+              total: d.teamProfile.total || 0,
+              createdAt: d.teamProfile.createdAt || d.createdAt
+            });
+          }
+        });
+
+        let list = Array.from(teamMap.values()).filter(t => {
+          const matchSearch = (t.name || '').toLowerCase().includes(search) || (t.path || '').includes(search);
+          let matchDate = true;
+          if (t.createdAt && (dStart || dEnd)) {
+            const itemDate = new Date(t.createdAt);
+            if (dStart && itemDate < dStart) matchDate = false;
+            if (dEnd && itemDate > dEnd) matchDate = false;
+          }
+          return matchSearch && matchDate;
+        });
+
+        list.sort((a, b) => {
+          let vA = a[sortCol];
+          let vB = b[sortCol];
+          if (sortCol === 'createdAt') {
+            vA = new Date(vA || 0).getTime();
+            vB = new Date(vB || 0).getTime();
+            return sortAsc ? vA - vB : vB - vA;
+          }
+          if (typeof vA === 'string') return sortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+          return sortAsc ? (vA || 0) - (vB || 0) : (vB || 0) - (vA || 0);
+        });
+
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--muted);">No matching teams found.</td></tr>`;
+          return;
+        }
+
+        list.forEach(t => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${t.name}</strong></td>
+            <td><span class="badge badge-active">$${(t.total / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
+            <td style="font-size: 0.85rem;">${formatDate(t.createdAt)}</td>
+            <td class="mono">/t/${t.path}</td>
+            <td class="mono col-uuid">${t.uuid}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    function processIncomingData(parsed) {
+      rawData = Array.isArray(parsed) ? parsed : (parsed.data || []);
+      populateTeamDropdown();
+      updateKPIs();
+      applyFilters();
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          processIncomingData(JSON.parse(event.target.result));
+        } catch (err) {
+          alert("Invalid JSON format.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function exportCSV() {
+      if (rawData.length === 0) {
+        alert("No data available to export.");
+        return;
+      }
+      let csv = currentView === 'INDIVIDUAL' 
+        ? 'UUID,Name,Path,Raised_USD,Goal_USD,Date_Created,Team_Name,Team_UUID\n'
+        : 'Team_UUID,Team_Name,Team_Slug,Total_Raised_USD,Date_Created\n';
+
+      if (currentView === 'INDIVIDUAL') {
+        rawData.filter(d => d.type === 'INDIVIDUAL').forEach(d => {
+          csv += `"${d.uuid}","${d.name}","${d.path}",${(d.total || 0) / 100},${(d.goal || 0) / 100},"${d.createdAt || ''}","${d.teamProfile?.name || ''}","${d.teamProfile?.uuid || ''}"\n`;
+        });
+      } else {
+        const teamMap = new Map();
+        rawData.forEach(d => {
+          if (d.type === 'GROUP' && !d.isCampaignProfile) teamMap.set(d.uuid, d);
+          if (d.teamProfile) teamMap.set(d.teamProfile.uuid, d.teamProfile);
+        });
+        teamMap.forEach(t => {
+          csv += `"${t.uuid}","${t.name}","${t.path}",${(t.total || 0) / 100},"${t.createdAt || ''}"\n`;
+        });
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `plane_pull_${currentView.toLowerCase()}_export.csv`;
+      a.click();
+    }
+
+    async function init() {
+      renderHeaders();
+      applyFilters();
+      try {
+        const res = await fetch('./profiles.json');
+        if (res.ok) {
+          const json = await res.json();
+          processIncomingData(json);
+        }
+      } catch (err) {
+        console.warn("Auto-fetch blocked by local file policy. Use '+ Load JSON File' to manually select profiles.json if running via file:// protocol.");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
