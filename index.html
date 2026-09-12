@@ -40,14 +40,12 @@
     td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:hover { background: #24324a; }
     
-    /* Fluid Team Column Sizing */
-    .col-team { 
+    .col-team, .col-company { 
       width: auto;
-      min-width: 120px;
-      max-width: 220px;
+      min-width: 110px;
+      max-width: 180px;
       overflow-wrap: anywhere;
       word-break: break-word;
-      hyphens: auto;
       white-space: normal;
       line-height: 1.35;
       font-size: 0.85rem;
@@ -69,7 +67,6 @@
       header div:last-child { display: flex; flex-wrap: wrap; width: 100%; gap: 8px; }
       header .btn { flex: 1; text-align: center; justify-content: center; }
 
-      /* Prevent iOS Safari auto-zoom on inputs (<16px) */
       input[type="text"], input[type="date"], select {
         font-size: 16px !important;
         width: 100%;
@@ -77,7 +74,7 @@
 
       .controls { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
       .tab-group { width: 100%; }
-      .tab { flex: 1; text-align: center; padding: 10px; }
+      .tab { flex: 1; text-align: center; padding: 10px 4px; font-size: 0.8rem; }
       .date-filter-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .date-filter-group span { display: none; }
 
@@ -87,14 +84,12 @@
 
       td, th { padding: 10px 8px; }
 
-      /* Dynamic fluid mobile width for team names */
-      .col-team {
-        min-width: 100px;
-        max-width: 32vw;
+      .col-team, .col-company {
+        min-width: 90px;
+        max-width: 25vw;
         font-size: 0.8rem;
       }
 
-      /* Hide verbose technical IDs on mobile screens */
       .col-uuid { display: none; }
     }
   </style>
@@ -116,7 +111,7 @@
 
   <section class="kpi-grid">
     <div class="kpi-card">
-      <div class="kpi-label">Total Volume (Indiv. Fundraisers)</div>
+      <div class="kpi-label" id="kpiVolumeLabel">Total Volume</div>
       <div class="kpi-val" id="kpiTotalRaised">$0.00</div>
     </div>
     <div class="kpi-card">
@@ -124,7 +119,7 @@
       <div class="kpi-val" id="kpiFundraisers" style="color: #fff;">0</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Unique Teams Represented</div>
+      <div class="kpi-label">Teams / Companies</div>
       <div class="kpi-val" id="kpiTeams" style="color: var(--accent);">0</div>
     </div>
     <div class="kpi-card">
@@ -136,13 +131,18 @@
   <section class="controls">
     <div class="tab-group">
       <button class="tab active" id="tabIndiv" onclick="setView('INDIVIDUAL')">Individuals</button>
-      <button class="tab" id="tabTeam" onclick="setView('TEAMS')">Unique Teams</button>
+      <button class="tab" id="tabTeam" onclick="setView('TEAMS')">Teams</button>
+      <button class="tab" id="tabCompany" onclick="setView('COMPANIES')">Companies</button>
     </div>
 
-    <input type="text" id="searchInput" placeholder="Search name, slug, or team..." oninput="applyFilters()" style="flex: 1; min-width: 180px;" />
+    <input type="text" id="searchInput" placeholder="Search names, slugs, or teams..." oninput="applyFilters()" style="flex: 1; min-width: 180px;" />
 
     <select id="teamFilter" onchange="applyFilters()">
       <option value="">All Teams</option>
+    </select>
+
+    <select id="companyFilter" onchange="applyFilters()">
+      <option value="">All Companies</option>
     </select>
 
     <select id="statusFilter" onchange="applyFilters()">
@@ -178,10 +178,15 @@
       currentView = view;
       document.getElementById('tabIndiv').classList.toggle('active', view === 'INDIVIDUAL');
       document.getElementById('tabTeam').classList.toggle('active', view === 'TEAMS');
+      document.getElementById('tabCompany').classList.toggle('active', view === 'COMPANIES');
+      
       document.getElementById('teamFilter').style.display = (view === 'INDIVIDUAL') ? 'inline-block' : 'none';
+      document.getElementById('companyFilter').style.display = (view === 'INDIVIDUAL') ? 'inline-block' : 'none';
+      
       sortCol = (view === 'INDIVIDUAL') ? 'createdAt' : 'total';
       sortAsc = false;
       renderHeaders();
+      updateKPIs();
       applyFilters();
     }
 
@@ -191,18 +196,29 @@
         tr.innerHTML = `
           <th onclick="setSort('name')">Name ⬍</th>
           <th class="col-team" onclick="setSort('team')">Team ⬍</th>
+          <th class="col-company" onclick="setSort('company')">Company ⬍</th>
           <th onclick="setSort('total')">Raised ⬍</th>
           <th onclick="setSort('goal')">Goal ⬍</th>
           <th onclick="setSort('createdAt')">Date / Time ⬍</th>
           <th class="col-uuid">UUID / Path</th>
         `;
-      } else {
+      } else if (currentView === 'TEAMS') {
         tr.innerHTML = `
           <th onclick="setSort('name')">Team Name ⬍</th>
+          <th class="col-company" onclick="setSort('company')">Company ⬍</th>
           <th onclick="setSort('total')">Team Raised ⬍</th>
           <th onclick="setSort('createdAt')">Created Date ⬍</th>
           <th>Team Slug</th>
           <th class="col-uuid">Team UUID</th>
+        `;
+      } else {
+        tr.innerHTML = `
+          <th onclick="setSort('name')">Company Name ⬍</th>
+          <th onclick="setSort('total')">Company Raised ⬍</th>
+          <th onclick="setSort('goal')">Company Goal ⬍</th>
+          <th onclick="setSort('createdAt')">Created Date ⬍</th>
+          <th>Company Slug</th>
+          <th class="col-uuid">Company UUID</th>
         `;
       }
     }
@@ -230,48 +246,97 @@
       });
     }
 
-    function populateTeamDropdown() {
-      const sel = document.getElementById('teamFilter');
+    // Helper to find Company info anywhere in record
+    function getCompanyInfo(d) {
+      if (d.organisationProfile && d.organisationProfile.name) {
+        return d.organisationProfile;
+      }
+      if (d.parent && d.parent.type === 'ORGANISATION') {
+        return d.parent;
+      }
+      if (d.parent && d.parent.parent && d.parent.parent.type === 'ORGANISATION') {
+        return d.parent.parent;
+      }
+      return null;
+    }
+
+    function populateDropdowns() {
+      const selTeam = document.getElementById('teamFilter');
+      const selComp = document.getElementById('companyFilter');
       const teams = new Set();
+      const companies = new Set();
+
       rawData.forEach(d => {
-        if (d.type === 'INDIVIDUAL' && d.teamProfile && d.teamProfile.name) {
-          teams.add(d.teamProfile.name);
+        if (d.type === 'INDIVIDUAL') {
+          if (d.teamProfile && d.teamProfile.name) teams.add(d.teamProfile.name);
+          const comp = getCompanyInfo(d);
+          if (comp && comp.name) companies.add(comp.name);
         }
       });
-      sel.innerHTML = '<option value="">All Teams</option>';
+
+      selTeam.innerHTML = '<option value="">All Teams</option>';
       Array.from(teams).sort().forEach(t => {
         const opt = document.createElement('option');
         opt.value = t; opt.innerText = t;
-        sel.appendChild(opt);
+        selTeam.appendChild(opt);
+      });
+
+      selComp.innerHTML = '<option value="">All Companies</option>';
+      Array.from(companies).sort().forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.innerText = c;
+        selComp.appendChild(opt);
       });
     }
 
     function updateKPIs() {
-      let totalCents = 0;
+      let indivCents = 0;
       let zeroes = 0;
       let individualCount = 0;
-      const teams = new Set();
+      const teamMap = new Map();
+      const compMap = new Map();
 
       rawData.forEach(d => {
         if (d.type === 'INDIVIDUAL') {
           individualCount++;
-          totalCents += (d.total || 0);
+          indivCents += (d.total || 0);
           if ((d.total || 0) === 0) zeroes++;
-          if (d.teamProfile && d.teamProfile.name) teams.add(d.teamProfile.name);
-        } else if (d.type === 'GROUP') {
-          teams.add(d.name);
+          if (d.teamProfile) teamMap.set(d.teamProfile.uuid, d.teamProfile.total || 0);
+        } else if (d.type === 'GROUP' && !d.isCampaignProfile) {
+          teamMap.set(d.uuid, d.total || 0);
+        }
+
+        const comp = getCompanyInfo(d);
+        if (comp && comp.uuid) {
+          compMap.set(comp.uuid, comp.total || 0);
         }
       });
 
-      document.getElementById('kpiTotalRaised').innerText = `$${(totalCents / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+      // Total Volume dynamic toggle
+      let activeVolumeCents = 0;
+      const labelEl = document.getElementById('kpiVolumeLabel');
+
+      if (currentView === 'INDIVIDUAL') {
+        activeVolumeCents = indivCents;
+        labelEl.innerText = "Total Volume (Individuals)";
+      } else if (currentView === 'TEAMS') {
+        teamMap.forEach(tot => activeVolumeCents += tot);
+        labelEl.innerText = "Total Volume (Teams)";
+      } else {
+        compMap.forEach(tot => activeVolumeCents += tot);
+        labelEl.innerText = "Total Volume (Companies)";
+      }
+
+      document.getElementById('kpiTotalRaised').innerText = `$${(activeVolumeCents / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
       document.getElementById('kpiFundraisers').innerText = individualCount;
-      document.getElementById('kpiTeams').innerText = teams.size;
+      document.getElementById('kpiTeams').innerText = `${teamMap.size}T / ${compMap.size}C`;
       document.getElementById('kpiZeroes').innerText = zeroes;
     }
 
     function applyFilters() {
       const search = document.getElementById('searchInput').value.toLowerCase();
       const team = document.getElementById('teamFilter').value;
+      const company = document.getElementById('companyFilter').value;
       const status = document.getElementById('statusFilter').value;
       const dStart = document.getElementById('dateStart').value ? new Date(document.getElementById('dateStart').value + 'T00:00:00') : null;
       const dEnd = document.getElementById('dateEnd').value ? new Date(document.getElementById('dateEnd').value + 'T23:59:59') : null;
@@ -279,7 +344,7 @@
       tbody.innerHTML = '';
 
       if (rawData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 32px;">No profiles loaded. Click "↻ Sync API" or load a file.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--muted); padding: 32px;">No profiles loaded. Click "↻ Sync API" or load a file.</td></tr>`;
         return;
       }
 
@@ -287,11 +352,17 @@
         let list = rawData.filter(d => {
           if (d.type && d.type !== 'INDIVIDUAL') return false;
 
-          const tName = d.teamProfile ? d.teamProfile.name : 'No Team';
+          const tName = d.teamProfile ? d.teamProfile.name : '';
+          const comp = getCompanyInfo(d);
+          const cName = comp ? comp.name : '';
+
           const matchSearch = (d.name || '').toLowerCase().includes(search) || 
                               tName.toLowerCase().includes(search) || 
+                              cName.toLowerCase().includes(search) ||
                               (d.path || '').includes(search);
-          const matchTeam = !team || (d.teamProfile && d.teamProfile.name === team);
+
+          const matchTeam = !team || tName === team;
+          const matchCompany = !company || cName === company;
           const matchStatus = status === 'ALL' || 
                               (status === 'HAS_RAISED' && (d.total || 0) > 0) || 
                               (status === 'ZERO' && (d.total || 0) === 0);
@@ -303,12 +374,98 @@
             if (dEnd && itemDate > dEnd) matchDate = false;
           }
 
-          return matchSearch && matchTeam && matchStatus && matchDate;
+          return matchSearch && matchTeam && matchCompany && matchStatus && matchDate;
         });
 
         list.sort((a, b) => {
-          let vA = sortCol === 'team' ? (a.teamProfile?.name || '') : a[sortCol];
-          let vB = sortCol === 'team' ? (b.teamProfile?.name || '') : b[sortCol];
+          let vA, vB;
+          if (sortCol === 'team') {
+            vA = a.teamProfile?.name || '';
+            vB = b.teamProfile?.name || '';
+          } else if (sortCol === 'company') {
+            vA = getCompanyInfo(a)?.name || '';
+            vB = getCompanyInfo(b)?.name || '';
+          } else if (sortCol === 'createdAt') {
+            vA = new Date(a.createdAt || 0).getTime();
+            vB = new Date(b.createdAt || 0).getTime();
+            return sortAsc ? vA - vB : vB - vA;
+          } else {
+            vA = a[sortCol];
+            vB = b[sortCol];
+          }
+
+          if (typeof vA === 'string') return sortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+          return sortAsc ? (vA || 0) - (vB || 0) : (vB || 0) - (vA || 0);
+        });
+
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--muted);">No matching individual fundraisers found.</td></tr>`;
+          return;
+        }
+
+        list.forEach(d => {
+          const raised = (d.total || 0) / 100;
+          const goal = (d.goal || 0) / 100;
+          const teamName = d.teamProfile ? d.teamProfile.name : '<span style="color:var(--muted)">None</span>';
+          const comp = getCompanyInfo(d);
+          const compName = comp ? comp.name : '<span style="color:var(--muted)">None</span>';
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${d.name || 'Unnamed'}</strong></td>
+            <td class="col-team">${teamName}</td>
+            <td class="col-company">${compName}</td>
+            <td><span class="badge ${raised > 0 ? 'badge-active' : 'badge-zero'}">$${raised.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
+            <td>$${goal.toLocaleString()}</td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(d.createdAt)}</td>
+            <td class="mono col-uuid">${d.uuid ? d.uuid.substring(0, 8) + '...' : ''} (${d.path || ''})</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      } else if (currentView === 'TEAMS') {
+        const teamMap = new Map();
+
+        rawData.forEach(d => {
+          const comp = getCompanyInfo(d);
+          if (d.type === 'GROUP' && !d.isCampaignProfile) {
+            teamMap.set(d.uuid, {
+              uuid: d.uuid,
+              name: d.name,
+              path: d.path,
+              total: d.total || 0,
+              createdAt: d.createdAt,
+              companyName: comp ? comp.name : ''
+            });
+          }
+          if (d.teamProfile && !teamMap.has(d.teamProfile.uuid)) {
+            teamMap.set(d.teamProfile.uuid, {
+              uuid: d.teamProfile.uuid,
+              name: d.teamProfile.name,
+              path: d.teamProfile.path,
+              total: d.teamProfile.total || 0,
+              createdAt: d.teamProfile.createdAt || d.createdAt,
+              companyName: comp ? comp.name : ''
+            });
+          }
+        });
+
+        let list = Array.from(teamMap.values()).filter(t => {
+          const matchSearch = (t.name || '').toLowerCase().includes(search) || 
+                              (t.companyName || '').toLowerCase().includes(search) ||
+                              (t.path || '').includes(search);
+          let matchDate = true;
+          if (t.createdAt && (dStart || dEnd)) {
+            const itemDate = new Date(t.createdAt);
+            if (dStart && itemDate < dStart) matchDate = false;
+            if (dEnd && itemDate > dEnd) matchDate = false;
+          }
+          return matchSearch && matchDate;
+        });
+
+        list.sort((a, b) => {
+          let vA = sortCol === 'company' ? a.companyName : a[sortCol];
+          let vB = sortCol === 'company' ? b.companyName : b[sortCol];
           if (sortCol === 'createdAt') {
             vA = new Date(vA || 0).getTime();
             vB = new Date(vB || 0).getTime();
@@ -319,54 +476,46 @@
         });
 
         if (list.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color: var(--muted);">No matching individual fundraisers found.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color: var(--muted);">No matching teams found.</td></tr>`;
           return;
         }
 
-        list.forEach(d => {
-          const raised = (d.total || 0) / 100;
-          const goal = (d.goal || 0) / 100;
-          const teamName = d.teamProfile ? d.teamProfile.name : '<span style="color:var(--muted)">None</span>';
+        list.forEach(t => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong>${d.name || 'Unnamed'}</strong></td>
-            <td class="col-team">${teamName}</td>
-            <td><span class="badge ${raised > 0 ? 'badge-active' : 'badge-zero'}">$${raised.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
-            <td>$${goal.toLocaleString()}</td>
-            <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(d.createdAt)}</td>
-            <td class="mono col-uuid">${d.uuid ? d.uuid.substring(0, 8) + '...' : ''} (${d.path || ''})</td>
+            <td><strong>${t.name}</strong></td>
+            <td class="col-company">${t.companyName || '<span style="color:var(--muted)">None</span>'}</td>
+            <td><span class="badge badge-active">$${(t.total / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(t.createdAt)}</td>
+            <td class="mono">/t/${t.path}</td>
+            <td class="mono col-uuid">${t.uuid}</td>
           `;
           tbody.appendChild(tr);
         });
+
       } else {
-        const teamMap = new Map();
+        // COMPANIES VIEW
+        const compMap = new Map();
 
         rawData.forEach(d => {
-          if (d.type === 'GROUP' && !d.isCampaignProfile) {
-            teamMap.set(d.uuid, {
-              uuid: d.uuid,
-              name: d.name,
-              path: d.path,
-              total: d.total || 0,
-              createdAt: d.createdAt
-            });
-          }
-          if (d.teamProfile && !teamMap.has(d.teamProfile.uuid)) {
-            teamMap.set(d.teamProfile.uuid, {
-              uuid: d.teamProfile.uuid,
-              name: d.teamProfile.name,
-              path: d.teamProfile.path,
-              total: d.teamProfile.total || 0,
-              createdAt: d.teamProfile.createdAt || d.createdAt
+          const comp = getCompanyInfo(d);
+          if (comp && comp.uuid && !compMap.has(comp.uuid)) {
+            compMap.set(comp.uuid, {
+              uuid: comp.uuid,
+              name: comp.name,
+              path: comp.path,
+              total: comp.total || 0,
+              goal: comp.goal || 0,
+              createdAt: comp.createdAt
             });
           }
         });
 
-        let list = Array.from(teamMap.values()).filter(t => {
-          const matchSearch = (t.name || '').toLowerCase().includes(search) || (t.path || '').includes(search);
+        let list = Array.from(compMap.values()).filter(c => {
+          const matchSearch = (c.name || '').toLowerCase().includes(search) || (c.path || '').includes(search);
           let matchDate = true;
-          if (t.createdAt && (dStart || dEnd)) {
-            const itemDate = new Date(t.createdAt);
+          if (c.createdAt && (dStart || dEnd)) {
+            const itemDate = new Date(c.createdAt);
             if (dStart && itemDate < dStart) matchDate = false;
             if (dEnd && itemDate > dEnd) matchDate = false;
           }
@@ -386,18 +535,19 @@
         });
 
         if (list.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--muted);">No matching teams found.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color: var(--muted);">No matching companies found.</td></tr>`;
           return;
         }
 
-        list.forEach(t => {
+        list.forEach(c => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong>${t.name}</strong></td>
-            <td><span class="badge badge-active">$${(t.total / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
-            <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(t.createdAt)}</td>
-            <td class="mono">/t/${t.path}</td>
-            <td class="mono col-uuid">${t.uuid}</td>
+            <td><strong>${c.name}</strong></td>
+            <td><span class="badge badge-active">$${(c.total / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></td>
+            <td>$${((c.goal || 0) / 100).toLocaleString()}</td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(c.createdAt)}</td>
+            <td class="mono">/${c.path}</td>
+            <td class="mono col-uuid">${c.uuid}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -406,7 +556,7 @@
 
     function processIncomingData(parsed, sourceLabel = "Local Data") {
       rawData = Array.isArray(parsed) ? parsed : (parsed.data || []);
-      populateTeamDropdown();
+      populateDropdowns();
       updateKPIs();
       applyFilters();
       const statusEl = document.getElementById('syncStatus');
@@ -416,78 +566,83 @@
     }
 
     async function syncLiveAPI() {
-  const btn = document.getElementById('refreshBtn');
-  const statusEl = document.getElementById('syncStatus');
-  const originalText = btn.innerText;
-  btn.disabled = true;
-  btn.innerText = "Syncing...";
-  statusEl.innerText = "Connecting to api.raisely.com...";
-  statusEl.style.color = "var(--accent)";
+      const btn = document.getElementById('refreshBtn');
+      const statusEl = document.getElementById('syncStatus');
+      const originalText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = "Syncing...";
+      statusEl.innerText = "Connecting to api.raisely.com...";
+      statusEl.style.color = "var(--accent)";
 
-  const baseUrl = "https://api.raisely.com/v3/profiles";
-  const campaign = "2026-plane-pull";
-  const limit = 100;
-  let offset = 0;
-  let aggregatedData = [];
-  let totalCount = Infinity;
+      const baseUrl = "https://api.raisely.com/v3/profiles";
+      const campaign = "2026-plane-pull";
+      const limit = 100;
+      let offset = 0;
+      let aggregatedData = [];
+      let totalCount = Infinity;
 
-  try {
-    while (offset < totalCount) {
-      statusEl.innerText = `Fetching records ${offset + 1} to ${Math.min(offset + limit, totalCount === Infinity ? '...' : totalCount)}...`;
-      const url = `${baseUrl}?campaign=${campaign}&limit=${limit}&offset=${offset}`;
-      const res = await fetch(url);
-      
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      try {
+        while (offset < totalCount) {
+          statusEl.innerText = `Fetching records ${offset + 1} to ${Math.min(offset + limit, totalCount === Infinity ? '...' : totalCount)}...`;
+          const url = `${baseUrl}?campaign=${campaign}&limit=${limit}&offset=${offset}`;
+          const res = await fetch(url);
+          
+          if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          
+          const json = await res.json();
+          const items = json.data || [];
+          if (items.length === 0) break;
+
+          aggregatedData = aggregatedData.concat(items);
+          totalCount = json.pagination?.total || aggregatedData.length;
+          offset += items.length;
+
+          if (!json.pagination || items.length < limit) break;
+        }
+
+        processIncomingData(aggregatedData, "Live API Synchronized");
+
+        // Safe pruned caching for sessionStorage (<5MB)
+        try {
+          const lightweightCache = aggregatedData.map(d => ({
+            uuid: d.uuid,
+            name: d.name,
+            path: d.path,
+            type: d.type,
+            total: d.total,
+            goal: d.goal,
+            createdAt: d.createdAt,
+            isCampaignProfile: d.isCampaignProfile,
+            teamProfile: d.teamProfile ? {
+              uuid: d.teamProfile.uuid,
+              name: d.teamProfile.name,
+              path: d.teamProfile.path,
+              total: d.teamProfile.total,
+              createdAt: d.teamProfile.createdAt
+            } : null,
+            organisationProfile: d.organisationProfile ? {
+              uuid: d.organisationProfile.uuid,
+              name: d.organisationProfile.name,
+              path: d.organisationProfile.path,
+              total: d.organisationProfile.total,
+              goal: d.organisationProfile.goal,
+              createdAt: d.organisationProfile.createdAt
+            } : null
+          }));
+          sessionStorage.setItem('cached_profiles', JSON.stringify(lightweightCache));
+        } catch (storageWarn) {
+          console.warn("Storage quota warning; kept in memory:", storageWarn);
+        }
+
+      } catch (err) {
+        console.error(err);
+        statusEl.innerText = `API Sync Failed: ${err.message}.`;
+        statusEl.style.color = "var(--red)";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
       }
-      
-      const json = await res.json();
-      const items = json.data || [];
-      if (items.length === 0) break;
-
-      aggregatedData = aggregatedData.concat(items);
-      totalCount = json.pagination?.total || aggregatedData.length;
-      offset += items.length;
-
-      if (!json.pagination || items.length < limit) break;
     }
-
-    // Update in-memory data
-    processIncomingData(aggregatedData, "Live API Synchronized");
-
-    // Prune unnecessary data before caching to stay well under browser 5MB limit
-    try {
-      const lightweightCache = aggregatedData.map(d => ({
-        uuid: d.uuid,
-        name: d.name,
-        path: d.path,
-        type: d.type,
-        total: d.total,
-        goal: d.goal,
-        createdAt: d.createdAt,
-        isCampaignProfile: d.isCampaignProfile,
-        teamProfile: d.teamProfile ? {
-          uuid: d.teamProfile.uuid,
-          name: d.teamProfile.name,
-          path: d.teamProfile.path,
-          total: d.teamProfile.total,
-          createdAt: d.teamProfile.createdAt
-        } : null
-      }));
-      sessionStorage.setItem('cached_profiles', JSON.stringify(lightweightCache));
-    } catch (storageWarn) {
-      console.warn("Could not cache to sessionStorage, but in-memory data is active:", storageWarn);
-    }
-
-  } catch (err) {
-    console.error(err);
-    statusEl.innerText = `API Sync Failed: ${err.message}. Using prior data.`;
-    statusEl.style.color = "var(--red)";
-  } finally {
-    btn.disabled = false;
-    btn.innerText = originalText;
-  }
-}
 
     function handleFileUpload(e) {
       const file = e.target.files[0];
@@ -508,22 +663,33 @@
         alert("No data available to export.");
         return;
       }
-      let csv = currentView === 'INDIVIDUAL' 
-        ? 'UUID,Name,Path,Raised_USD,Goal_USD,Date_Created,Team_Name,Team_UUID\n'
-        : 'Team_UUID,Team_Name,Team_Slug,Total_Raised_USD,Date_Created\n';
-
+      let csv = '';
       if (currentView === 'INDIVIDUAL') {
+        csv = 'UUID,Name,Path,Raised_USD,Goal_USD,Date_Created,Team_Name,Company_Name\n';
         rawData.filter(d => d.type === 'INDIVIDUAL').forEach(d => {
-          csv += `"${d.uuid}","${d.name}","${d.path}",${(d.total || 0) / 100},${(d.goal || 0) / 100},"${d.createdAt || ''}","${d.teamProfile?.name || ''}","${d.teamProfile?.uuid || ''}"\n`;
+          const comp = getCompanyInfo(d);
+          csv += `"${d.uuid}","${d.name}","${d.path}",${(d.total || 0) / 100},${(d.goal || 0) / 100},"${d.createdAt || ''}","${d.teamProfile?.name || ''}","${comp?.name || ''}"\n`;
         });
-      } else {
+      } else if (currentView === 'TEAMS') {
+        csv = 'Team_UUID,Team_Name,Company_Name,Team_Slug,Total_Raised_USD,Date_Created\n';
         const teamMap = new Map();
         rawData.forEach(d => {
-          if (d.type === 'GROUP' && !d.isCampaignProfile) teamMap.set(d.uuid, d);
-          if (d.teamProfile) teamMap.set(d.teamProfile.uuid, d.teamProfile);
+          const comp = getCompanyInfo(d);
+          if (d.type === 'GROUP' && !d.isCampaignProfile) teamMap.set(d.uuid, { ...d, companyName: comp?.name });
+          if (d.teamProfile) teamMap.set(d.teamProfile.uuid, { ...d.teamProfile, companyName: comp?.name });
         });
         teamMap.forEach(t => {
-          csv += `"${t.uuid}","${t.name}","${t.path}",${(t.total || 0) / 100},"${t.createdAt || ''}"\n`;
+          csv += `"${t.uuid}","${t.name}","${t.companyName || ''}","${t.path}",${(t.total || 0) / 100},"${t.createdAt || ''}"\n`;
+        });
+      } else {
+        csv = 'Company_UUID,Company_Name,Company_Slug,Total_Raised_USD,Goal_USD,Date_Created\n';
+        const compMap = new Map();
+        rawData.forEach(d => {
+          const comp = getCompanyInfo(d);
+          if (comp && comp.uuid) compMap.set(comp.uuid, comp);
+        });
+        compMap.forEach(c => {
+          csv += `"${c.uuid}","${c.name}","${c.path}",${(c.total || 0) / 100},${(c.goal || 0) / 100},"${c.createdAt || ''}"\n`;
         });
       }
 
