@@ -153,11 +153,15 @@
     </select>
 
     <div class="date-filter-group">
-      <span>From:</span>
-      <input type="date" id="dateStart" onchange="applyFilters()" />
-      <span>To:</span>
-      <input type="date" id="dateEnd" onchange="applyFilters()" />
-    </div>
+  <div class="date-field">
+    <label for="dateStart">From</label>
+    <input type="date" id="dateStart" onchange="applyFilters()" />
+  </div>
+  <div class="date-field">
+    <label for="dateEnd">To</label>
+    <input type="date" id="dateEnd" onchange="applyFilters()" />
+  </div>
+</div>
   </section>
 
   <section class="table-container">
