@@ -28,8 +28,9 @@
     input[type="text"], input[type="date"], select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; outline: none; }
     input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--accent); }
     .date-filter-group { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); }
-    .btn { background: var(--accent); color: #0f172a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+    .btn { background: var(--accent); color: #0f172a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; }
     .btn:hover { background: var(--accent-hover); color: #fff; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .btn-secondary:hover { background: var(--border); }
     .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
@@ -48,15 +49,14 @@
     .tab { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
     .tab.active { background: var(--accent); color: #0f172a; font-weight: 600; border-color: var(--accent); }
     .file-input { display: none; }
+    .status-text { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
 
-    /* Mobile Responsive Optimizations */
     @media (max-width: 768px) {
       body { padding: 14px; }
       header { flex-direction: column; align-items: stretch; gap: 12px; }
-      header div:last-child { display: flex; width: 100%; }
-      header .btn { flex: 1; text-align: center; }
+      header div:last-child { display: flex; flex-wrap: wrap; width: 100%; gap: 8px; }
+      header .btn { flex: 1; text-align: center; justify-content: center; }
 
-      /* Prevent iOS auto-zoom on inputs (<16px) */
       input[type="text"], input[type="date"], select {
         font-size: 16px !important;
         width: 100%;
@@ -72,7 +72,6 @@
       .kpi-card { padding: 12px; }
       .kpi-val { font-size: 1.3rem; }
 
-      /* Hide verbose technical IDs on mobile to avoid horizontal table blowout */
       .col-uuid { display: none; }
     }
   </style>
@@ -82,12 +81,13 @@
   <header>
     <div>
       <h1>2026 Plane Pull — Campaign Ops Console</h1>
-      <p style="color: var(--muted); font-size: 0.85rem; margin-top: 4px;">Real-time profile performance, team grouping & registration tracking</p>
+      <p class="status-text" id="syncStatus">DataSource: Initializing...</p>
     </div>
-    <div style="display: flex; gap: 10px;">
-      <button class="btn btn-secondary" onclick="document.getElementById('fileUpload').click()">+ Load JSON File</button>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn" id="refreshBtn" onclick="syncLiveAPI()">↻ Sync API</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileUpload').click()">+ Load JSON</button>
       <input type="file" id="fileUpload" class="file-input" accept=".json" onchange="handleFileUpload(event)" />
-      <button class="btn" onclick="exportCSV()">Export CSV</button>
+      <button class="btn btn-secondary" onclick="exportCSV()">Export CSV</button>
     </div>
   </header>
 
@@ -256,7 +256,7 @@
       tbody.innerHTML = '';
 
       if (rawData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 32px;">No profiles loaded. Ensure profiles.json is in the directory or load a file via the button above.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 32px;">No profiles loaded. Click "↻ Sync API" or load a file.</td></tr>`;
         return;
       }
 
@@ -381,11 +381,66 @@
       }
     }
 
-    function processIncomingData(parsed) {
+    function processIncomingData(parsed, sourceLabel = "Local Data") {
       rawData = Array.isArray(parsed) ? parsed : (parsed.data || []);
       populateTeamDropdown();
       updateKPIs();
       applyFilters();
+      const statusEl = document.getElementById('syncStatus');
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      statusEl.innerText = `${sourceLabel} (${rawData.length} profiles loaded at ${timeStr})`;
+      statusEl.style.color = "var(--green)";
+    }
+
+    // Auto-paginating live API fetcher
+    async function syncLiveAPI() {
+      const btn = document.getElementById('refreshBtn');
+      const statusEl = document.getElementById('syncStatus');
+      const originalText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = "Syncing...";
+      statusEl.innerText = "Connecting to api.raisely.com...";
+      statusEl.style.color = "var(--accent)";
+
+      const baseUrl = "https://api.raisely.com/v3/profiles";
+      const campaign = "2026-plane-pull";
+      const limit = 100;
+      let offset = 0;
+      let aggregatedData = [];
+      let totalCount = Infinity;
+
+      try {
+        while (offset < totalCount) {
+          statusEl.innerText = `Fetching records ${offset + 1} to ${Math.min(offset + limit, totalCount === Infinity ? '...' : totalCount)}...`;
+          const url = `${baseUrl}?campaign=${campaign}&limit=${limit}&offset=${offset}`;
+          const res = await fetch(url);
+          
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          
+          const json = await res.json();
+          const items = json.data || [];
+          if (items.length === 0) break;
+
+          aggregatedData = aggregatedData.concat(items);
+          totalCount = json.pagination?.total || aggregatedData.length;
+          offset += items.length;
+
+          // Guard against runaway loops if total is missing
+          if (!json.pagination || items.length < limit) break;
+        }
+
+        processIncomingData(aggregatedData, "Live API Synchronized");
+        sessionStorage.setItem('cached_profiles', JSON.stringify(aggregatedData));
+      } catch (err) {
+        console.error(err);
+        statusEl.innerText = `API Sync Failed: ${err.message}. Using prior data.`;
+        statusEl.style.color = "var(--red)";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+      }
     }
 
     function handleFileUpload(e) {
@@ -394,7 +449,7 @@
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          processIncomingData(JSON.parse(event.target.result));
+          processIncomingData(JSON.parse(event.target.result), `Imported ${file.name}`);
         } catch (err) {
           alert("Invalid JSON format.");
         }
@@ -436,15 +491,32 @@
     async function init() {
       renderHeaders();
       applyFilters();
+
+      // 1. Check if session already holds data
+      const cached = sessionStorage.getItem('cached_profiles');
+      if (cached) {
+        try {
+          processIncomingData(JSON.parse(cached), "Restored from Session");
+          return;
+        } catch(e) {}
+      }
+
+      // 2. Otherwise try reading the bundled profiles.json
       try {
         const res = await fetch('./profiles.json');
         if (res.ok) {
           const json = await res.json();
-          processIncomingData(json);
+          processIncomingData(json, "Loaded from profiles.json");
+          return;
         }
       } catch (err) {
-        console.warn("Auto-fetch blocked by local file policy. Use '+ Load JSON File' to manually select profiles.json if running via file:// protocol.");
+        // file:// or 404
       }
+
+      // 3. Fallback notice
+      const statusEl = document.getElementById('syncStatus');
+      statusEl.innerText = "No local cache found. Click '↻ Sync API' to pull live.";
+      statusEl.style.color = "var(--muted)";
     }
 
     init();
