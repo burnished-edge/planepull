@@ -16,81 +16,305 @@
       --green: #4ade80;
       --red: #f87171;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 24px; }
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-    h1 { font-size: 1.5rem; font-weight: 700; color: #fff; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .kpi-card { background: var(--card); border: 1px solid var(--border); padding: 18px; border-radius: 8px; }
-    .kpi-label { font-size: 0.8rem; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
-    .kpi-val { font-size: 1.6rem; font-weight: 700; color: var(--green); }
-    .controls { background: var(--card); border: 1px solid var(--border); padding: 16px; border-radius: 8px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
-    input[type="text"], input[type="date"], select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; outline: none; }
-    input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--accent); }
-    .date-filter-group { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); }
-    .btn { background: var(--accent); color: #0f172a; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; }
-    .btn:hover { background: var(--accent-hover); color: #fff; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-secondary:hover { background: var(--border); }
-    .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-    th { background: #162032; padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; cursor: pointer; user-select: none; white-space: nowrap; }
-    th:hover { color: var(--text); }
-    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    tr:hover { background: #24324a; }
-    
-    .col-team, .col-company { 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .status-text {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 18px;
+      border-radius: 8px;
+    }
+    .kpi-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .kpi-val {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .controls {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 8px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    input[type="text"],
+    input[type="date"],
+    select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+      height: 38px;
+    }
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      border-color: var(--accent);
+    }
+    .date-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .date-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .date-field label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+    .btn {
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 38px;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: var(--accent-hover);
+      color: #fff;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+    .table-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #162032;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    th:hover {
+      color: var(--text);
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:hover {
+      background: #24324a;
+    }
+    .col-team,
+    .col-company {
       width: auto;
       min-width: 110px;
       max-width: 180px;
       overflow-wrap: anywhere;
       word-break: break-word;
+      hyphens: auto;
       white-space: normal;
       line-height: 1.35;
       font-size: 0.85rem;
     }
-
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
-    .badge-active { background: rgba(74, 222, 128, 0.1); color: var(--green); }
-    .badge-zero { background: rgba(248, 113, 113, 0.1); color: var(--red); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; color: var(--muted); }
-    .tab-group { display: flex; gap: 8px; }
-    .tab { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
-    .tab.active { background: var(--accent); color: #0f172a; font-weight: 600; border-color: var(--accent); }
-    .file-input { display: none; }
-    .status-text { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-active {
+      background: rgba(74, 222, 128, 0.1);
+      color: var(--green);
+    }
+    .badge-zero {
+      background: rgba(248, 113, 113, 0.1);
+      color: var(--red);
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .tab-group {
+      display: flex;
+      gap: 8px;
+    }
+    .tab {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tab.active {
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: 600;
+      border-color: var(--accent);
+    }
+    .file-input {
+      display: none;
+    }
 
     @media (max-width: 768px) {
-      body { padding: 12px; }
-      header { flex-direction: column; align-items: stretch; gap: 12px; }
-      header div:last-child { display: flex; flex-wrap: wrap; width: 100%; gap: 8px; }
-      header .btn { flex: 1; text-align: center; justify-content: center; }
-
-      input[type="text"], input[type="date"], select {
+      body {
+        padding: 12px;
+      }
+      header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      header div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 8px;
+      }
+      header .btn {
+        flex: 1 1 calc(50% - 4px);
+      }
+      input[type="text"],
+      input[type="date"],
+      select {
         font-size: 16px !important;
         width: 100%;
       }
-
-      .controls { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
-      .tab-group { width: 100%; }
-      .tab { flex: 1; text-align: center; padding: 10px 4px; font-size: 0.8rem; }
-      .date-filter-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-      .date-filter-group span { display: none; }
-
-      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-      .kpi-card { padding: 12px; }
-      .kpi-val { font-size: 1.25rem; }
-
-      td, th { padding: 10px 8px; }
-
-      .col-team, .col-company {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px;
+      }
+      .tab-group {
+        width: 100%;
+      }
+      .tab {
+        flex: 1;
+        text-align: center;
+        padding: 10px 4px;
+        font-size: 0.8rem;
+      }
+      .date-filter-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .date-field {
+        width: 100%;
+      }
+      .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .kpi-card {
+        padding: 12px;
+      }
+      .kpi-val {
+        font-size: 1.25rem;
+      }
+      td,
+      th {
+        padding: 10px 8px;
+      }
+      .col-team,
+      .col-company {
         min-width: 90px;
         max-width: 25vw;
         font-size: 0.8rem;
       }
-
-      .col-uuid { display: none; }
+      .col-uuid {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -153,15 +377,15 @@
     </select>
 
     <div class="date-filter-group">
-  <div class="date-field">
-    <label for="dateStart">From</label>
-    <input type="date" id="dateStart" onchange="applyFilters()" />
-  </div>
-  <div class="date-field">
-    <label for="dateEnd">To</label>
-    <input type="date" id="dateEnd" onchange="applyFilters()" />
-  </div>
-</div>
+      <div class="date-field">
+        <label for="dateStart">From</label>
+        <input type="date" id="dateStart" onchange="applyFilters()" />
+      </div>
+      <div class="date-field">
+        <label for="dateEnd">To</label>
+        <input type="date" id="dateEnd" onchange="applyFilters()" />
+      </div>
+    </div>
   </section>
 
   <section class="table-container">
@@ -184,10 +408,10 @@
       document.getElementById('tabIndiv').classList.toggle('active', view === 'INDIVIDUAL');
       document.getElementById('tabTeam').classList.toggle('active', view === 'TEAMS');
       document.getElementById('tabCompany').classList.toggle('active', view === 'COMPANIES');
-      
+
       document.getElementById('teamFilter').style.display = (view === 'INDIVIDUAL') ? 'inline-block' : 'none';
       document.getElementById('companyFilter').style.display = (view === 'INDIVIDUAL') ? 'inline-block' : 'none';
-      
+
       sortCol = (view === 'INDIVIDUAL') ? 'createdAt' : 'total';
       sortAsc = false;
       renderHeaders();
@@ -229,10 +453,11 @@
     }
 
     function setSort(col) {
-      if (sortCol === col) sortAsc = !sortAsc;
-      else { 
-        sortCol = col; 
-        sortAsc = (col === 'name'); 
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = (col === 'name');
       }
       applyFilters();
     }
@@ -241,13 +466,13 @@
       if (!isoStr) return '<span style="color:var(--muted)">—</span>';
       const d = new Date(isoStr);
       if (isNaN(d.getTime())) return '—';
-      return d.toLocaleDateString(undefined, { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      }) + ' ' + d.toLocaleTimeString(undefined, { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      return d.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }) + ' ' + d.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit'
       });
     }
 
@@ -275,14 +500,16 @@
       selTeam.innerHTML = '<option value="">All Teams</option>';
       Array.from(teams).sort().forEach(t => {
         const opt = document.createElement('option');
-        opt.value = t; opt.innerText = t;
+        opt.value = t;
+        opt.innerText = t;
         selTeam.appendChild(opt);
       });
 
       selComp.innerHTML = '<option value="">All Companies</option>';
       Array.from(companies).sort().forEach(c => {
         const opt = document.createElement('option');
-        opt.value = c; opt.innerText = c;
+        opt.value = c;
+        opt.innerText = c;
         selComp.appendChild(opt);
       });
     }
@@ -351,15 +578,15 @@
           const comp = getCompanyInfo(d);
           const cName = comp ? comp.name : '';
 
-          const matchSearch = (d.name || '').toLowerCase().includes(search) || 
-                              tName.toLowerCase().includes(search) || 
+          const matchSearch = (d.name || '').toLowerCase().includes(search) ||
+                              tName.toLowerCase().includes(search) ||
                               cName.toLowerCase().includes(search) ||
                               (d.path || '').includes(search);
 
           const matchTeam = !team || tName === team;
           const matchCompany = !company || cName === company;
-          const matchStatus = status === 'ALL' || 
-                              (status === 'HAS_RAISED' && (d.total || 0) > 0) || 
+          const matchStatus = status === 'ALL' ||
+                              (status === 'HAS_RAISED' && (d.total || 0) > 0) ||
                               (status === 'ZERO' && (d.total || 0) === 0);
 
           let matchDate = true;
@@ -446,7 +673,7 @@
         });
 
         let list = Array.from(teamMap.values()).filter(t => {
-          const matchSearch = (t.name || '').toLowerCase().includes(search) || 
+          const matchSearch = (t.name || '').toLowerCase().includes(search) ||
                               (t.companyName || '').toLowerCase().includes(search) ||
                               (t.path || '').includes(search);
           let matchDate = true;
@@ -580,9 +807,9 @@
           statusEl.innerText = `Fetching ${offset + 1} to ${Math.min(offset + limit, totalCount === Infinity ? '...' : totalCount)}...`;
           const url = `${baseUrl}?campaign=${campaign}&limit=${limit}&offset=${offset}`;
           const res = await fetch(url);
-          
+
           if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          
+
           const json = await res.json();
           const items = json.data || [];
           if (items.length === 0) break;
@@ -631,8 +858,7 @@
         console.error(err);
         statusEl.innerText = `API Sync Failed: ${err.message}.`;
         statusEl.style.color = "var(--red)";
-        
-        // Secondary fallback to bundled profiles.json if API is unreachable
+
         if (rawData.length === 0) {
           try {
             const fallbackRes = await fetch('./profiles.json');
@@ -720,7 +946,6 @@
       renderHeaders();
       applyFilters();
 
-      // Check session cache first for fast recovery
       const cached = sessionStorage.getItem('cached_profiles');
       if (cached) {
         try {
@@ -729,7 +954,6 @@
         } catch(e) {}
       }
 
-      // Automatically sync live data on page load
       await syncLiveAPI();
     }
 
